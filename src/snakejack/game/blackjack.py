@@ -4,6 +4,7 @@ from enum import Enum, auto
 from typing import Optional, Tuple
 
 from ..models import Deck, Player
+from ..models.card import Card
 
 class GameResult(Enum):
     """Possible outcomes of a blackjack game."""
@@ -20,6 +21,8 @@ class GameState:
     is_game_over: bool = False
     result: Optional[GameResult] = None
     dealer_turn: bool = False
+    # Track per-player-hand statuses
+    player_hand_statuses: Optional[list] = None
 
 class Blackjack:
     """Main blackjack game class implementing game rules and flow."""
@@ -30,41 +33,61 @@ class Blackjack:
         self.player = Player("Player")
         self.dealer = Player("Dealer")
         self.is_game_over = False
+        # per-hand metadata: list of dicts with keys 'stood' and 'busted'
+        self.player_hand_statuses = []
 
-    def start_game(self) -> GameState:
+    def start_game(self, num_hands: int = 1) -> GameState:
         """Start a new game of blackjack.
         
         Returns:
             GameState: The initial state of the game after dealing cards.
         """
         self.deck.shuffle()
-        # Initial deal: player, dealer, player, dealer
-        self.player.add_card(self.deck.draw_card())
+        # Ensure player has requested number of hands (max 4)
+        self.player.create_hands(num_hands)
+        # Reset per-hand statuses
+        self.player_hand_statuses = [{"stood": False, "busted": False} for _ in range(len(self.player.hands))]
+
+        # Initial deal: give each hand one card, dealer one card, then each hand second card, dealer second card
+        # Deal round-robin to each player hand
+        for i in range(len(self.player.hands)):
+            self.player.add_card(self.deck.draw_card(), hand_index=i)
         self.dealer.add_card(self.deck.draw_card())
-        self.player.add_card(self.deck.draw_card())
+        for i in range(len(self.player.hands)):
+            self.player.add_card(self.deck.draw_card(), hand_index=i)
         self.dealer.add_card(self.deck.draw_card())
 
         return self._get_game_state()
 
-    def player_hit(self) -> GameState:
+    def player_hit(self, hand_index: int = 0) -> GameState:
         """Player takes another card.
         
         Returns:
             GameState: Updated game state after player's action.
         """
-        if self.is_game_over or len(self.player.hand) == 0:
+        # Validate hand
+        if self.is_game_over or not self.player.hands or hand_index >= len(self.player.hands):
             return self._get_game_state()
 
-        self.player.add_card(self.deck.draw_card())
-        
-        # Check if player busted
-        if self.player.get_hand_value() > 21:
+        # If that hand already stood or busted, ignore
+        status = self.player_hand_statuses[hand_index]
+        if status.get("stood") or status.get("busted"):
+            return self._get_game_state()
+
+        self.player.add_card(self.deck.draw_card(), hand_index=hand_index)
+
+        # Check if this hand busted
+        if self.player.get_hand_value(hand_index) > 21:
+            status["busted"] = True
+
+        # If all hands are finished (stood or busted), resolve dealer
+        if all(s.get("stood") or s.get("busted") for s in self.player_hand_statuses):
             self.is_game_over = True
             return self._determine_winner()
 
         return self._get_game_state()
 
-    def player_stand(self) -> GameState:
+    def player_stand(self, hand_index: int = 0) -> GameState:
         """Player stands with current hand, dealer's turn begins.
         
         Returns:
@@ -73,7 +96,15 @@ class Blackjack:
         if self.is_game_over:
             return self._get_game_state()
 
-        return self._dealer_turn()
+        # mark this hand as stood
+        if 0 <= hand_index < len(self.player_hand_statuses):
+            self.player_hand_statuses[hand_index]["stood"] = True
+
+        # If all hands are finished, dealer plays
+        if all(s.get("stood") or s.get("busted") for s in self.player_hand_statuses):
+            return self._dealer_turn()
+
+        return self._get_game_state()
 
     def _dealer_turn(self) -> GameState:
         """Execute dealer's turn according to house rules.
@@ -99,24 +130,39 @@ class Blackjack:
         Returns:
             GameState: Final game state with result.
         """
-        player_value = self.player.get_hand_value()
         dealer_value = self.dealer.get_hand_value()
-        
         state = self._get_game_state()
-        
-        # Check for busts first
-        if player_value > 21:
-            state.result = GameResult.DEALER_WINS
-        elif dealer_value > 21:
+        # Determine result per hand and store an aggregate result
+        results = []
+        for i, hand in enumerate(self.player.hands):
+            pv = self.player.get_hand_value(i)
+            # hand busted
+            if pv > 21:
+                results.append(GameResult.DEALER_WINS)
+            elif dealer_value > 21:
+                results.append(GameResult.PLAYER_WINS)
+            elif pv > dealer_value:
+                results.append(GameResult.PLAYER_WINS)
+            elif dealer_value > pv:
+                results.append(GameResult.DEALER_WINS)
+            else:
+                results.append(GameResult.PUSH)
+
+        # Aggregate: if all player hands win -> PLAYER_WINS; if all dealer win -> DEALER_WINS; else if all push -> PUSH
+        if all(r == GameResult.PLAYER_WINS for r in results):
             state.result = GameResult.PLAYER_WINS
-        # Then compare values
-        elif player_value > dealer_value:
-            state.result = GameResult.PLAYER_WINS
-        elif dealer_value > player_value:
+        elif all(r == GameResult.DEALER_WINS for r in results):
             state.result = GameResult.DEALER_WINS
-        else:
+        elif all(r == GameResult.PUSH for r in results):
             state.result = GameResult.PUSH
-            
+        else:
+            # Mixed results; leave aggregate result as None but include per-hand results
+            state.result = None
+        # attach per-hand results for client convenience
+        state.player_hand_statuses = [
+            {"stood": s.get("stood"), "busted": s.get("busted"), "result": (results[i].name if i < len(results) else None)}
+            for i, s in enumerate(self.player_hand_statuses)
+        ]
         return state
 
     def _get_game_state(self) -> GameState:
@@ -132,3 +178,45 @@ class Blackjack:
             is_game_over=self.is_game_over,
             dealer_turn=False
         )
+
+    # --- Serialization helpers ---
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable representation of the game.
+
+        The representation includes player hand, dealer hand, remaining deck,
+        whether the game is over, and the last result (if any).
+        """
+        # compute result if game is already over
+        result_name = None
+        if self.is_game_over:
+            # _determine_winner returns a GameState containing the result
+            state = self._determine_winner()
+            result_name = state.result.name if state.result else None
+
+        return {
+            "player": [[{"suit": c.suit, "value": c.value} for c in hand] for hand in self.player.hands],
+            "dealer": [{"suit": c.suit, "value": c.value} for c in self.dealer.hand],
+            "deck": [{"suit": c.suit, "value": c.value} for c in self.deck._cards],
+            "is_game_over": bool(self.is_game_over),
+            "result": result_name,
+            "player_hand_statuses": self.player_hand_statuses,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Blackjack":
+        """Reconstruct a Blackjack instance from a serialized dict.
+
+        This will restore players, dealer, and deck order.
+        """
+        game = cls()
+        # restore player hands (list of hands)
+        game.player.hands = [[Card(suit=c["suit"], value=c["value"]) for c in hand] for hand in data.get("player", [[]])]
+        # restore dealer hand
+        game.dealer.hand = [Card(suit=c["suit"], value=c["value"]) for c in data.get("dealer", [])]
+        # restore deck order
+        game.deck._cards = [Card(suit=c["suit"], value=c["value"]) for c in data.get("deck", [])]
+        # restore flags
+        game.is_game_over = bool(data.get("is_game_over", False))
+        # restore per-hand statuses
+        game.player_hand_statuses = data.get("player_hand_statuses", [{"stood": False, "busted": False} for _ in game.player.hands])
+        return game
