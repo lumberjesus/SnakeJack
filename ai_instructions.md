@@ -64,7 +64,7 @@ src/snakejack/
 
 ## Future Plans
 
-# - Add GUI interface
+ - Add GUI interface
 - Implement multiplayer support
 - Add game statistics tracking
 - Support different rule variations

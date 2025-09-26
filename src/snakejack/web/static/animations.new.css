@@ -1,0 +1,229 @@
+/* Card dealing animation */
+@keyframes dealCard {
+    0% {
+        opacity: 0;
+        transform: translateY(-100px) rotate(-20deg) scale(0.8);
+    }
+    60% {
+        transform: translateY(10px) rotate(5deg) scale(1.05);
+    }
+    80% {
+        transform: translateY(-5px) rotate(-2deg) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) rotate(0) scale(1);
+    }
+}
+
+/* Card flip animation */
+@keyframes flipCard {
+    0% {
+        transform: rotateY(0deg);
+    }
+    100% {
+        transform: rotateY(180deg);
+    }
+}
+
+/* Win/lose highlight pulse */
+@keyframes highlightPulse {
+    0% {
+        box-shadow: 0 8px 18px rgba(0,0,0,0.75);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 8px 28px var(--highlight-color, rgba(179,0,21,0.6));
+        transform: scale(1.02);
+    }
+    100% {
+        box-shadow: 0 8px 18px rgba(0,0,0,0.75);
+        transform: scale(1);
+    }
+}
+
+/* Game result animation */
+@keyframes resultPopIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.1) translateY(-5px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Shake animation for busted hands */
+@keyframes shakeBust {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    20%, 60% {
+        transform: translateX(-5px);
+    }
+    40%, 80% {
+        transform: translateX(5px);
+    }
+}
+
+/* Button hover effect */
+@keyframes buttonHover {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-2px);
+    }
+}
+
+/* Card exit animation */
+@keyframes cardExit {
+    0% {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.8) rotate(-10deg) translateY(50px);
+    }
+}
+
+/* Badge slide in/out */
+@keyframes badgeSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes badgeSlideOut {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+}
+
+/* Victory celebration */
+@keyframes celebrate {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1) rotate(5deg);
+    }
+}
+
+/* Card deal animation with smoother easing */
+.card {
+    animation: dealCard 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.8);
+}
+
+/* Flip animation for dealer's hidden card */
+.card.back.reveal {
+    animation: flipCard 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Win/lose highlight animations with scale effect */
+.card.win {
+    --highlight-color: rgba(0, 179, 21, 0.6);
+    animation: highlightPulse 2s ease-in-out infinite;
+}
+
+.card.lose {
+    --highlight-color: rgba(179, 0, 21, 0.6);
+    animation: highlightPulse 2s ease-in-out infinite;
+}
+
+.card.push {
+    --highlight-color: rgba(179, 179, 21, 0.6);
+    animation: highlightPulse 2s ease-in-out infinite;
+}
+
+/* Busted hand animation */
+.hand-status:has(.busted) {
+    animation: shakeBust 0.5s ease-in-out;
+}
+
+/* Game result animations */
+.result {
+    animation: resultPopIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.result.win {
+    animation: resultPopIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+               celebrate 2s ease-in-out infinite;
+    color: var(--win-color, #00b315);
+}
+
+/* Cheat badge animation */
+.cheat-badge {
+    animation: badgeSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cheat-badge.exit {
+    animation: badgeSlideOut 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Hand status animation */
+.hand-status {
+    animation: resultPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Button animations */
+.game-controls button {
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.game-controls button:not(:disabled):hover {
+    animation: buttonHover 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+}
+
+.game-controls button:not(:disabled):active {
+    transform: translateY(1px);
+}
+
+/* Card exit animation */
+.card-exit {
+    animation: cardExit 0.5s ease-out forwards;
+}
+
+/* Hand container entrance/exit */
+.hand-enter {
+    animation: resultPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hand-exit {
+    animation: cardExit 0.5s ease-out forwards;
+}
+
+/* Make sure all animations can be disabled for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
