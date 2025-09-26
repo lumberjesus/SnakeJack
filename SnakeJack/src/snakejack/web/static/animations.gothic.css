@@ -1,0 +1,305 @@
+/* Got    /* Gothic colors */
+    --blood-red: #b30015;
+    --deep-red: #800010;
+    --shadow-black: #000000;
+    --ethereal-gold: #ffd700;
+    --mystic-purple: #4b0082;
+    --infernal-red: #ff0000;
+    
+    /* Enhanced Effects */
+    --victory-glow: 0 0 30px rgba(255, 215, 0, 0.8),
+                    0 0 60px rgba(255, 215, 0, 0.6),
+                    0 0 90px rgba(255, 215, 0, 0.4),
+                    0 0 120px rgba(255, 215, 0, 0.2);nimations - INTENSE VERSION */
+:root {
+    /* Timing variables */
+    --victory-duration: 2.5s;
+    --defeat-duration: 2.2s;
+    
+    /* Gothic colors */
+    --blood-red: #b30015;
+    --deep-red: #800010;
+    --shadow-black: #000000;
+    --ethereal-gold: #ffd700;
+    --mystic-purple: #4b0082;
+    
+    /* Effects */
+    --victory-glow: 0 0 20px rgba(255, 215, 0, 0.6),
+                    0 0 40px rgba(255, 215, 0, 0.4),
+                    0 0 60px rgba(255, 215, 0, 0.2);
+    --defeat-glow: 0 0 20px rgba(179, 0, 21, 0.6),
+                   0 0 40px rgba(179, 0, 21, 0.4),
+                   0 0 60px rgba(179, 0, 21, 0.2);
+}
+
+/* Victory Animation */
+@keyframes victoryPulse {
+    0%, 100% {
+        transform: scale(1);
+        text-shadow: 0 0 10px var(--ethereal-gold);
+    }
+    50% {
+        transform: scale(1.1);
+        text-shadow: 0 0 30px var(--ethereal-gold),
+                    0 0 50px var(--ethereal-gold);
+    }
+}
+
+@keyframes victoryCrown {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes victorySparkle {
+    0%, 100% {
+        opacity: 0;
+        transform: scale(0) rotate(0deg);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1) rotate(180deg);
+    }
+}
+
+/* Defeat Animation */
+@keyframes defeatShatter {
+    0% {
+        transform: scale(1);
+        filter: brightness(1) blur(0);
+    }
+    20% {
+        transform: scale(1.05) rotate(-2deg);
+        filter: brightness(1.2) blur(1px);
+    }
+    40% {
+        transform: scale(0.95) rotate(2deg);
+        filter: brightness(0.8) blur(2px);
+    }
+    60% {
+        transform: scale(1.02) rotate(-1deg);
+        filter: brightness(1.1) blur(1px);
+    }
+    80% {
+        transform: scale(0.98) rotate(1deg);
+        filter: brightness(0.9) blur(2px);
+    }
+    100% {
+        transform: scale(1) rotate(0);
+        filter: brightness(1) blur(0);
+    }
+}
+
+@keyframes defeatBlood {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Apply animations to result states */
+.result.victory {
+    color: var(--ethereal-gold);
+    animation: victoryPulse var(--victory-duration) ease-in-out infinite;
+    position: relative;
+}
+
+.result.victory::before {
+    content: '👑';
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2em;
+    animation: victoryCrown 0.5s ease-out forwards;
+}
+
+.result.victory::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, var(--ethereal-gold) 10%, transparent 60%);
+    animation: victorySparkle 2s ease-in-out infinite;
+    z-index: -1;
+}
+
+.result.defeat {
+    color: var(--blood-red);
+    animation: defeatShatter var(--defeat-duration) ease-in-out forwards;
+    position: relative;
+}
+
+.result.defeat::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, 
+                transparent 20%,
+                rgba(179, 0, 21, 0.1) 40%,
+                rgba(179, 0, 21, 0.2) 60%,
+                rgba(179, 0, 21, 0.3) 80%);
+    animation: defeatBlood 1s ease-in-out forwards;
+    z-index: -1;
+}
+
+/* Win/Lose Card Effects */
+.card.winning-hand {
+    animation: victoryGlow 2s ease-in-out infinite;
+    box-shadow: var(--victory-glow);
+}
+
+.card.losing-hand {
+    animation: defeatDrain 1.5s ease-in-out forwards;
+    filter: saturate(0.8) brightness(0.9);
+}
+
+@keyframes victoryGlow {
+    0%, 100% {
+        transform: translateZ(0);
+        box-shadow: var(--victory-glow);
+    }
+    50% {
+        transform: translateZ(30px);
+        box-shadow: var(--victory-glow),
+                    0 10px 30px rgba(255, 215, 0, 0.3);
+    }
+}
+
+@keyframes defeatDrain {
+    0% {
+        transform: translateZ(0);
+        box-shadow: none;
+    }
+    100% {
+        transform: translateZ(-10px);
+        box-shadow: inset 0 0 20px rgba(179, 0, 21, 0.4);
+    }
+}
+
+/* Table Effects */
+.game-table.victory {
+    animation: tableVictory 3s ease-in-out infinite;
+}
+
+.game-table.defeat {
+    animation: tableDefeat 2s ease-in-out forwards;
+}
+
+@keyframes tableVictory {
+    0%, 100% {
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+        border-color: rgba(255, 215, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
+        border-color: rgba(255, 215, 0, 0.5);
+    }
+}
+
+@keyframes tableDefeat {
+    0% {
+        box-shadow: none;
+    }
+    100% {
+        box-shadow: inset 0 0 50px rgba(179, 0, 21, 0.3);
+        border-color: rgba(179, 0, 21, 0.4);
+    }
+}
+
+/* Gothic Mist Effects */
+.game-container::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.game-container.victory::after {
+    opacity: 0.2;
+    background: radial-gradient(circle at center,
+                transparent 20%,
+                rgba(255, 215, 0, 0.05) 60%,
+                rgba(255, 215, 0, 0.1) 100%);
+    animation: mistVictory 4s ease-in-out infinite;
+}
+
+.game-container.defeat::after {
+    opacity: 0.15;
+    background: radial-gradient(circle at center,
+                transparent 20%,
+                rgba(179, 0, 21, 0.05) 60%,
+                rgba(179, 0, 21, 0.1) 100%);
+    animation: mistDefeat 3s ease-in-out infinite;
+}
+
+@keyframes mistVictory {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.2;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.3;
+    }
+}
+
+@keyframes mistDefeat {
+    0%, 100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.15;
+    }
+    50% {
+        transform: scale(1.05) rotate(1deg);
+        opacity: 0.2;
+    }
+}
+
+/* Responsive Animations */
+@media (max-width: 768px) {
+    :root {
+        --victory-duration: 1.5s;
+        --defeat-duration: 1.3s;
+    }
+    
+    .result.victory::before {
+        font-size: 1.5em;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .result.victory,
+    .result.defeat,
+    .card.winning-hand,
+    .card.losing-hand,
+    .game-table.victory,
+    .game-table.defeat,
+    .game-container::after {
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    .result.victory::before,
+    .result.victory::after,
+    .result.defeat::before {
+        animation: none !important;
+    }
+}

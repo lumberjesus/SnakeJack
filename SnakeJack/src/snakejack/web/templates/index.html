@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnakeJack - Python Blackjack Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='animations.ultimate.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='animations.intense.css') }}">
+</head>
+<body>
+    <div class="game-container">
+        <h1>SnakeJack 🐍♠️</h1>
+        <div id="cheat-badge" class="cheat-badge" aria-hidden="true"></div>
+        
+        <div class="game-table">
+            <div class="dealer-area">
+                <h2>Dealer's Hand</h2>
+                <div id="dealer-hand" class="hand"></div>
+                <div id="dealer-value" class="hand-value"></div>
+            </div>
+            
+            <div class="player-area">
+                <h2>Your Hand(s)</h2>
+                <div id="player-hands" class="hands-container">
+                    <!-- JS will render up to 4 hands here -->
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <button id="start-button">New Game</button>
+                <button id="hit-button" disabled>Hit</button>
+                <button id="stand-button" disabled>Stand</button>
+            </div>
+            
+            <div id="game-result" class="result"></div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='game.new.js') }}"></script>
+</body>
+</html>
