@@ -17,13 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
         'lucky': 'Next card is an Ace'
     };
     let activeCheat = '';
+    
+    // Track last game state to prevent unnecessary redraws
+    let lastGameState = null;
+    let lastGameStateString = '';
 
     function createCard(card) {
         const cardElement = document.createElement('div');
         cardElement.className = `card ${['Hearts', 'Diamonds'].includes(card.suit) ? 'red' : 'black'}`;
         
-        // Add initial animation class
-        cardElement.classList.add('card-enter');
+        // Animations disabled for now
+        // cardElement.classList.add('card-enter');
         
         const suitSymbol = getSuitSymbol(card.suit);
         cardElement.innerHTML = `
@@ -54,6 +58,49 @@ document.addEventListener('DOMContentLoaded', () => {
             'Spades': '♠'
         };
         return symbols[suit] || suit;
+    }
+
+    function updateTurnOrderDisplay(currentPlayer, turnOrder, gameSession = null) {
+        const turnOrderDisplay = document.getElementById('turn-order-display');
+        if (!turnOrderDisplay) return;
+
+        turnOrderDisplay.innerHTML = '';
+
+        // Get player names from the session if available
+        const playerNames = {};
+        if (gameSession && gameSession.players) {
+            gameSession.players.forEach(p => {
+                playerNames[p.player_id] = p.player_name;
+            });
+        }
+
+        // Display players in turn order
+        if (turnOrder && turnOrder.length > 0) {
+            turnOrder.forEach(playerId => {
+                const badge = document.createElement('div');
+                badge.className = 'player-turn-badge';
+                
+                if (playerId === currentPlayer) {
+                    badge.classList.add('current');
+                    badge.innerHTML = `📍 ${playerNames[playerId] || playerId}`;
+                } else {
+                    badge.innerHTML = `👤 ${playerNames[playerId] || playerId}`;
+                }
+                
+                turnOrderDisplay.appendChild(badge);
+            });
+        }
+
+        // Add dealer badge
+        const dealerBadge = document.createElement('div');
+        dealerBadge.className = 'player-turn-badge dealer';
+        if (currentPlayer === 'dealer') {
+            dealerBadge.classList.add('current');
+            dealerBadge.innerHTML = '♠ 🎰 Dealer ♠';
+        } else {
+            dealerBadge.innerHTML = '♠ Dealer ♠';
+        }
+        turnOrderDisplay.appendChild(dealerBadge);
     }
 
     function createHandElement(index, handData, value, status) {
@@ -113,16 +160,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateGameState(data, showDealerCards = false) {
-        // If server returned multiple hands, render them; otherwise fallback to single-hand
+        // If server returned all players, render them; otherwise fallback to single player
         playerHandsContainer.innerHTML = '';
-        if (data.player_hands) {
+        
+        // Check if we have all_players data (for multiplayer with all players visible)
+        if (data.all_players && typeof data.all_players === 'object') {
+            // Render each player's hands
+            Object.entries(data.all_players).forEach(([playerId, playerData], playerIdx) => {
+                const hands = playerData.hands || [];
+                const values = playerData.values || [];
+                const statuses = playerData.statuses || [];
+                const isCurrent = playerData.is_current_player;
+                
+                // Create a section for this player
+                const playerSection = document.createElement('div');
+                playerSection.style.marginRight = '20px';
+                playerSection.style.display = 'inline-block';
+                playerSection.style.verticalAlign = 'top';
+                
+                // Add player label
+                const label = document.createElement('div');
+                label.style.fontWeight = 'bold';
+                label.style.marginBottom = '10px';
+                label.textContent = isCurrent ? '👤 You' : `👥 Player ${playerIdx + 1}`;
+                playerSection.appendChild(label);
+                
+                // Add hands
+                hands.forEach((hand, idx) => {
+                    const handElement = createHandElement(idx, hand, values[idx] || 0, statuses[idx]);
+                    playerSection.appendChild(handElement);
+                });
+                
+                playerHandsContainer.appendChild(playerSection);
+            });
+        } else if (data.player_hands) {
+            // Single player display (original behavior)
             const hands = data.player_hands || [];
             const values = data.player_values || [];
             const statuses = data.player_hand_statuses || [];
             hands.forEach((hand, idx) => {
                 setTimeout(() => {
                     playerHandsContainer.appendChild(createHandElement(idx, hand, values[idx] || 0, statuses[idx]));
-                }, idx * 300); // 300ms delay between each hand
+                }, idx * 300);
             });
         } else if (data.player_hand) {
             // legacy single-hand response
@@ -141,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!showDealerCards && (data.dealer_hand || []).length > 1) {
             setTimeout(() => {
                 const hiddenCard = document.createElement('div');
-                hiddenCard.className = 'card back card-enter';
+                hiddenCard.className = 'card back';  // Animations disabled - removed 'card-enter'
                 hiddenCard.innerHTML = '🂠';
                 dealerHand.appendChild(hiddenCard);
                 
@@ -205,14 +284,30 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             gameResult.textContent = '';
         }
+
+        // Update turn order display if available
+        if (data.current_player && data.turn_order) {
+            updateTurnOrderDisplay(data.current_player, data.turn_order);
+        }
     }
 
     // Keep a reference to the original implementation before any wrappers
     const originalUpdateGameState = updateGameState;
 
+    // Check if we're in a multiplayer session
+    const isMultiplayer = () => {
+        return window.multiplayerSessionId && window.multiplayerSessionId.trim() !== '';
+    };
+
     async function startGame() {
         try {
-            const response = await fetch('/api/game/start', { method: 'POST' });
+            const endpoint = isMultiplayer() ? '/api/game/multiplayer/start' : '/api/game/start';
+            const body = isMultiplayer() ? { session_id: window.multiplayerSessionId } : {};
+            const response = await fetch(endpoint, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
             const ct = response.headers.get('content-type') || '';
             let data = null;
 
@@ -234,14 +329,28 @@ document.addEventListener('DOMContentLoaded', () => {
             updateGameState(data);
             hitButton.disabled = false;
             standButton.disabled = false;
+
+            // If multiplayer, start polling for game state updates
+            if (isMultiplayer()) {
+                startGameStatusPolling();
+            }
         } catch (error) {
             console.error('Error starting game:', error);
         }
     }
 
-    async function hit() {
+    async function hit(handIndex = 0) {
         try {
-            const response = await fetch('/api/game/hit', { method: 'POST' });
+            const endpoint = isMultiplayer() ? '/api/game/multiplayer/hit' : '/api/game/hit';
+            const body = isMultiplayer() ? { 
+                session_id: window.multiplayerSessionId,
+                hand_index: handIndex 
+            } : { hand_index: handIndex };
+            const response = await fetch(endpoint, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
             const ct = response.headers.get('content-type') || '';
             let data = null;
 
@@ -265,7 +374,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function stand() {
         try {
-            const response = await fetch('/api/game/stand', { method: 'POST' });
+            const endpoint = isMultiplayer() ? '/api/game/multiplayer/stand' : '/api/game/stand';
+            const body = isMultiplayer() ? { session_id: window.multiplayerSessionId } : {};
+            const response = await fetch(endpoint, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
             const ct = response.headers.get('content-type') || '';
             let data = null;
 
@@ -368,33 +483,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Start new game with cheat if active
-            const params = activeCheat === 'royal' ? '?cheat=royal' : '';
-            const response = await fetch('/api/game/start' + params, { method: 'POST' });
-            const ct = response.headers.get('content-type') || '';
-            let data = null;
-            
-            if (ct.includes('application/json')) {
-                data = await response.json();
-            } else {
-                data = { error: await response.text() };
-            }
+            // Start new game with cheat if active (cheats not supported in multiplayer)
+            if (isMultiplayer()) {
+                const response = await fetch('/api/game/multiplayer/start', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: window.multiplayerSessionId })
+                });
+                const ct = response.headers.get('content-type') || '';
+                let data = null;
+                
+                if (ct.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    data = { error: await response.text() };
+                }
 
-            if (!response.ok) {
-                console.error('Server error starting game (cheat):', data);
-                gameResult.textContent = data.error || `Error starting game (status ${response.status})`;
-                startButton.disabled = false;
-                hitButton.disabled = true;
-                standButton.disabled = true;
-                return;
-            }
-            
-            if (activeCheat === 'royal') {
-                activeCheat = '';
+                if (!response.ok) {
+                    console.error('Server error starting multiplayer game:', data);
+                    gameResult.textContent = data.error || `Error starting game (status ${response.status})`;
+                    startButton.disabled = false;
+                    hitButton.disabled = true;
+                    standButton.disabled = true;
+                    return;
+                }
+
+                updateGameState(data);
+                startGameStatusPolling();
+            } else {
+                // Single-player: Support cheats
+                const params = activeCheat === 'royal' ? '?cheat=royal' : '';
+                const response = await fetch('/api/game/start' + params, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const ct = response.headers.get('content-type') || '';
+                let data = null;
+                
+                if (ct.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    data = { error: await response.text() };
+                }
+
+                if (!response.ok) {
+                    console.error('Server error starting game (cheat):', data);
+                    gameResult.textContent = data.error || `Error starting game (status ${response.status})`;
+                    startButton.disabled = false;
+                    hitButton.disabled = true;
+                    standButton.disabled = true;
+                    return;
+                }
+                
+                if (activeCheat === 'royal') {
+                    activeCheat = '';
+                }
+
+                updateGameState(data);
             }
 
             // Update game state and enable appropriate buttons
-            updateGameState(data);
             startButton.disabled = true;
             hitButton.disabled = false;
             standButton.disabled = false;
@@ -409,7 +558,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function hitWithCheats() {
         if (activeCheat === 'lucky') {
-            const response = await fetch('/api/game/hit?cheat=ace', { method: 'POST' });
+            const response = await fetch('/api/game/hit?cheat=ace', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
             const ct = response.headers.get('content-type') || '';
             let data = null;
             if (ct.includes('application/json')) {
@@ -432,7 +585,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function standWithCheats() {
         if (activeCheat === 'python') {
-            const response = await fetch('/api/game/stand?cheat=bust', { method: 'POST' });
+            const response = await fetch('/api/game/stand?cheat=bust', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
             const ct = response.headers.get('content-type') || '';
             let data = null;
             if (ct.includes('application/json')) {
@@ -477,6 +634,22 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGameState = (data, showDealerCards) => {
         updateGameStateWithCheats(data, showDealerCards);
     };
+
+    // Listen for multiplayer game state updates from multiplayer.js polling
+    document.addEventListener('multiplayerGameUpdate', (event) => {
+        if (event.detail && event.detail.gameState) {
+            // Convert game state to JSON string to compare
+            const stateString = JSON.stringify(event.detail.gameState);
+            
+            // Only update if the state has actually changed
+            if (stateString !== lastGameStateString) {
+                lastGameStateString = stateString;
+                lastGameState = event.detail.gameState;
+                // Multiplayer game state received - only update if it's a new game or different state
+                updateGameState(event.detail.gameState, false);
+            }
+        }
+    });
 
     startButton.addEventListener('click', startGameWithCheats);
     hitButton.addEventListener('click', hitWithCheats);
