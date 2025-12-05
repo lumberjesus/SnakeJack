@@ -2,6 +2,17 @@
 
 A Python implementation of BlackJack, converted from the original C# SharpJack implementation.
 
+## Requirements
+
+- Python 3.7+
+- pip
+- wheel (for packaging)
+
+To install wheel:
+```bash
+pip install wheel
+```
+
 ## Installation
 
 ```bash
