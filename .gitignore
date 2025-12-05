@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+
+# Flask session and instance files
+flask_session/
+instance/
+*.db
+*.sqlite3
+
+# Build and packaging
+build/
+dist/
+*.egg-info/
+SnakeJack/flask_session/
+SnakeJack/src/snakejack.egg-info/
+src/snakejack.egg-info/
+
+# VSCode workspace
+*.code-workspace
+
+# Test cache
+*.pytest_cache/
+
+# OS files
+.DS_Store
