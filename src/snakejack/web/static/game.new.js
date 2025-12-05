@@ -158,7 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Update start button
-        startButton.disabled = !data.is_game_over;
+        if (data.is_game_over) {
+            startButton.disabled = false;
+        } else {
+            startButton.disabled = true;
+        }
 
         // Show aggregate result if provided
         if (data.is_game_over && data.result) {
@@ -336,15 +340,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Clear any existing game state with fade-out animation
             if (gameResult.textContent) {
                 gameResult.classList.add('result-exit');
-                // Remove victory/defeat classes
                 document.querySelector('.game-table').classList.remove('victory', 'defeat');
                 document.querySelector('.game-container').classList.remove('victory', 'defeat');
                 await new Promise(resolve => {
-                    gameResult.addEventListener('animationend', () => {
+                    let resolved = false;
+                    const handler = () => {
+                        if (resolved) return;
+                        resolved = true;
                         gameResult.textContent = '';
                         gameResult.classList.remove('result-exit', 'victory', 'defeat');
                         resolve();
-                    }, { once: true });
+                    };
+                    gameResult.addEventListener('animationend', handler, { once: true });
+                    setTimeout(handler, 300); // fallback if animationend doesn't fire
                 });
             }
 
@@ -354,17 +362,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 existingHands.forEach(el => el.classList.add('hand-exit'));
                 await new Promise(resolve => {
                     let count = existingHands.length;
+                    let resolved = false;
+                    const handler = () => {
+                        if (resolved) return;
+                        resolved = true;
+                        playerHandsContainer.innerHTML = '';
+                        dealerHand.innerHTML = '';
+                        if (dealerValue) dealerValue.textContent = '';
+                        resolve();
+                    };
                     existingHands.forEach(el => {
                         el.addEventListener('animationend', () => {
                             count--;
-                            if (count === 0) {
-                                playerHandsContainer.innerHTML = '';
-                                dealerHand.innerHTML = '';
-                                if (dealerValue) dealerValue.textContent = '';
-                                resolve();
-                            }
+                            if (count === 0) handler();
                         }, { once: true });
                     });
+                    setTimeout(handler, 300); // fallback if animationend doesn't fire
                 });
             }
 
