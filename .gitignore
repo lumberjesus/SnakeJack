@@ -15,8 +15,6 @@ instance/
 build/
 dist/
 *.egg-info/
-SnakeJack/flask_session/
-SnakeJack/src/snakejack.egg-info/
 src/snakejack.egg-info/
 
 # VSCode workspace
@@ -27,3 +25,22 @@ src/snakejack.egg-info/
 
 # OS files
 .DS_Store
+
+# Ignore wheel and distribution files
+*.whl
+
+# Ignore logs
+*.log
+
+# Ignore local tools/scripts
+/tools/
+
+# Ignore macOS system files
+Icon?
+
+# Ignore MANIFEST and pip cache
+MANIFEST
+pip-wheel-metadata/
+
+# Ignore backup files
+*~
