@@ -12,4 +12,12 @@ setup(
     python_requires=">=3.7",
     author="Ben",
     description="A Python implementation of BlackJack (converted from C# SharpJack)",
+    include_package_data=True,
+    package_data={
+        "snakejack.web": [
+            "templates/*.html",
+            "static/*.*",
+            "static/**/*.*"
+        ]
+    },
 )

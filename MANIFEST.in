@@ -1,0 +1,2 @@
+recursive-include src/snakejack/web/templates *.html
+recursive-include src/snakejack/web/static *
