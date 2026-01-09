@@ -2,9 +2,29 @@
 # Build script for SnakeJack
 set -e
 
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -e .
-pip install -e ".[dev]"
+# Detect Python command (python3 on Mac/Linux, python on Windows)
+if command -v python3 &> /dev/null; then
+    PYTHON=python3
+elif command -v python &> /dev/null; then
+    PYTHON=python
+else
+    echo "Error: Python not found. Please install Python 3.7+"
+    exit 1
+fi
+
+echo "Using Python: $PYTHON"
+
+$PYTHON -m venv venv
+
+# Activate venv (different path on Windows vs Mac/Linux)
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+    source venv/Scripts/activate
+else
+    source venv/bin/activate
+fi
+
+# Use python -m pip to avoid permission issues on Windows
+python -m pip install --upgrade pip || true
+python -m pip install -e .
+python -m pip install -e ".[dev]" || true
 echo "Build complete."
