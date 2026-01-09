@@ -3,7 +3,10 @@
 set -e
 
 # Detect Python command (python3 on Mac/Linux, python on Windows)
-if command -v python3 &> /dev/null; then
+# On Windows with Git Bash, bypass App Execution Aliases by using python.exe directly
+if command -v python.exe &> /dev/null; then
+    PYTHON=python.exe
+elif command -v python3 &> /dev/null; then
     PYTHON=python3
 elif command -v python &> /dev/null; then
     PYTHON=python

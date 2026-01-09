@@ -7,8 +7,8 @@ VM_IP=40.82.178.116
 REMOTE_DIR="/home/jack/snakejack_deploy"
 
 # Build and package locally
-#./build.sh
-#./package.sh
+./build.sh
+./package.sh
 
 echo "Connecting to VM to create directory..."
 ssh ${VM_USER}@${VM_IP} "mkdir -p ${REMOTE_DIR}"
@@ -36,7 +36,7 @@ else
 fi
 ENDSSH
 
-echo ""
-echo "Deploy complete!"
-echo "Press Enter to close this window..."
-read
+# echo ""
+# echo "Deploy complete!"
+# echo "Press Enter to close this window..."
+# read
